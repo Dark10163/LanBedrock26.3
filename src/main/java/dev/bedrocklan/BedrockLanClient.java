@@ -3,10 +3,11 @@ package dev.bedrocklan;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.screens.ShareToLanScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import java.lang.reflect.Method;
 
 public class BedrockLanClient implements ClientModInitializer {
     static boolean enabled = false;
@@ -16,12 +17,11 @@ public class BedrockLanClient implements ClientModInitializer {
     public void onInitializeClient() {
         // Add the toggle to the Open to LAN screen
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
-            if (screen instanceof ShareToLanScreen) {
-                Screens.getButtons(screen).add(
-                    CycleButton.onOffBuilder(enabled).create(
-                        w - 160, 10, 150, 20,
-                        Component.literal("Allow Bedrock"),
-                        (btn, val) -> enabled = val));
+            if (isLanScreen(screen)) {
+                addWidget(screen, CycleButton.onOffBuilder(enabled).create(
+                    w - 160, 10, 150, 20,
+                    Component.literal("Allow Bedrock"),
+                    (btn, val) -> enabled = val));
             }
         });
 
@@ -42,5 +42,29 @@ public class BedrockLanClient implements ClientModInitializer {
         });
 
         Runtime.getRuntime().addShutdownHook(new Thread(GeyserLauncher::stop));
+    }
+
+    // Matched by name so it works whether the screen is called ShareToLanScreen
+    // (older versions) or MultiplayerOptionsScreen (26.x)
+    private static boolean isLanScreen(Screen s) {
+        String n = s.getClass().getSimpleName();
+        return n.equals("ShareToLanScreen") || n.equals("MultiplayerOptionsScreen");
+    }
+
+    // Screen.addRenderableWidget is protected, so call it by reflection
+    private static void addWidget(Screen screen, Object widget) {
+        try {
+            for (Class<?> c = screen.getClass(); c != null; c = c.getSuperclass()) {
+                for (Method m : c.getDeclaredMethods()) {
+                    if (m.getName().equals("addRenderableWidget") && m.getParameterCount() == 1) {
+                        m.setAccessible(true);
+                        m.invoke(screen, widget);
+                        return;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
