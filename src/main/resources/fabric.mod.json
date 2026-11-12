@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "bedrocklan",
+  "version": "${version}",
+  "name": "Bedrock LAN",
+  "description": "Adds an Allow Bedrock toggle to Open to LAN. Runs Geyser so Bedrock players can join, no Java account needed.",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.bedrocklan.BedrockLanClient"] },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "minecraft": "~26.3",
+    "java": ">=25"
+  }
+}
